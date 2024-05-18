@@ -1,29 +1,26 @@
-import torch
+from tokenizers import (
+    decoders,
+    models,
+    normalizers,
+    pre_tokenizers,
+    processors,
+    trainers,
+    Tokenizer,
+)
 
-M = ['~', '$', ' ', '\n', '\'', ',']
-for i in range(26):
-    M.append(chr(ord('a') + i))
-vocab_size = len(M)
 
-def tokenize(str):
-  tokens = []
-  for char in str:
-      index = M.index(char) if char in M else 1
-      tokens.append(index)
-  return tokens
+tokenizer = Tokenizer(models.BPE())
+tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+trainer = trainers.BpeTrainer(vocab_size=128, special_tokens=["~"])
+tokenizer.train(["songs.txt"], trainer=trainer)
+tokenizer.post_processor = processors.ByteLevel(trim_offsets=False)
 
-def untokenize(ids):
-  chars = []
-  id_list = ids.tolist()
-  for idx in id_list:
-      char = M[idx]
-      chars.append(char)
-  return ''.join(chars)
+sentence = "i love you baby."
 
-def token_to_vec(token):
-  out = torch.zeros(vocab_size, dtype=int)
-  out[token] = 1
-  return out
+encoding = tokenizer.encode(sentence)
 
-def tokens_to_vecs(tokensArrays):
-  return torch.stack([torch.stack([token_to_vec(token) for token in tokens]) for tokens in tokensArrays]).float()
+tokenizer.decoder = decoders.ByteLevel()
+print(tokenizer.decode(encoding.ids))
+
+tokenizer.save("tokenizer.json")
+

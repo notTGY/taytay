@@ -1,22 +1,47 @@
-# AI neural network model
+# TayTay v2
 
 Learned on songs from https://github.com/shaynak/taylor-swift-lyrics/blob/main/songs.csv
 
-For some reason model really likes char `w`
-sample output:
-```
-and w w t we we the we the were the w the wand we we we we the the we the w we the the w we w
-we w the we w ound the we t we w w we w w wund the we we we t we w w
-```
+## Fun facts
 
-Using words was too inefficient, model didn't learn anything from that data.
+The only major change to architecture from v1
+is BPE tokenizer. This time I actually read
+Chinchilla paper. I know, that I have 800k tokens,
+I want to train the model for approximately
+100 epochs. So I went for 1.2M params and left my
+laptop running during watching
+"Fast & Furious: Hobbs & Shaw", which is an
+amazing movie, by the way.
+(For the reference, 100 epochs take ~2 hours for me)
 
-My GPU can handle max `721600` param model training :(
-So if you want to see results, give me decent GPU.
-Until then no paper.
+During evaluation I asked model to continue the same
+prompt of original model: "a". And I also included
+probability of completion. Without beam search it
+looks dramatic sometimes, but it is interesting to
+see "Dunning–Kruger effect of Neural network", where 
+it completes sequence the same way, but is less sure 
+about it's correctness after epochs pass by.
 
-(To prove that I haven't messed up I tried training SOTA model\* of comparable size on the same data
-and got approximately the same results (loss ~8 on 16 seq length batches). So TayTay should be doable)
+Tokenizer made model write more coherent text and
+even during training it gave me perfectly fine
+Taylor-Swift-like lyrics "ah,out,out,out,out,"
+Something you could really witness in her works.
+After exactly 100 epochs the result was:
+"all they, is" with 6.4% certainty. Decent.
+You can play with this exact checkpoint
+"taytay-hobbs.pt".
 
-* Gemma has special license, but I haven't used it in any way to generate text or in any other way
-except of being baseline for performance.
+
+## Conclusion
+
+TayTay v2 is a real piece.
+
+Due to my laziness there would be no comparison to
+the original model. Also, during tokenizator
+adaptation I have rewritten some code of the model,
+so I guess it was flawed, which gives not much
+assurance current version is not. Parameters
+grew from 120k to 1.2M (which is adorable, because
+this resembles growth of
+GPT-1 => GPT-2 => GPT-3 => GPT-4 by a factor of 10)
+

@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-from tokenizer import tokenize, untokenize, vocab_size
-
 class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model, context_length):
@@ -22,7 +20,10 @@ class PositionalEncoding(nn.Module):
         Arguments:
             x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
         """
-        x = x + self.pe[:x.size(0)]
+        pe = self.pe[:x.size(0)].reshape(x.shape[0], x.shape[2])
+        x = torch.einsum('ijk,ik->ijk', x, pe)
+        #print(x.shape)
+        #x = x + pe
         return x
 
 class MaskedSelfAttention(nn.Module):
@@ -118,6 +119,7 @@ class TayTay(nn.Module):
 
     def __init__(
         self,
+        vocab_size=128,
         embedding_dim=2,
         key_dim=2,
         n_heads=1,
@@ -142,40 +144,30 @@ class TayTay(nn.Module):
         self.lm_head = nn.Linear(embedding_dim, vocab_size)
         self.softmax = nn.Softmax(dim=2)
 
+    def count_params(self):
+      n_params = 0
+      for name, param in self.named_parameters():
+          a = 1
+          for i in param.shape:
+              a *= i
+          n_params += a
+      return n_params
+
     def forward(self, x):
         """
         Arguments:
-            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+            x: Tensor, shape ``[seq_len, batch_size]``
         """
+        #print("input", x.shape)
         x = self.emb(x)
+        #print("emb", x.shape)
         x = self.positional_encoding(x)
         for i in range(len(self.decoder)):
           x = self.decoder[i](x)
         x = self.lm_head(self.ln(x))
+        #print("lm head", x.shape)
         x = self.softmax(x)
+        #print("softmax", x.shape)
         return x
 
 
-model = TayTay(embedding_dim=72, n_heads=8, scaling_factor=4, ffn_layers=1, decoder_layers=4)
-def gen(model, input_text, new_tokens=10, device='cpu'):
-  for i in range(new_tokens):
-    tokens = tokenize(input_text)
-    input_ids = torch.tensor([tokens]).transpose(0, 1).to(device)
-    preds = torch.argmax(model.forward(input_ids), dim=2).transpose(0, 1)
-    new_token = untokenize(torch.tensor([preds[0][-1]]))
-    input_text = input_text + '' + new_token
-  return input_text
-
-def process_batch(model, batch, optimizer, loss):
-  (x, y) = batch
-  output = model(x)
-  l = loss(output, y)
-  l.backward()
-  optimizer.step()
-  optimizer.zero_grad(set_to_none=True)
-  return l
-def eval_batch(model, batch, loss):
-  (x, y) = batch
-  output = model(x)
-  l = loss(output, y)
-  return l
